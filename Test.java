@@ -24,12 +24,15 @@ import java.util.*;
 import org.akop.solver.*;
 
 
+// http://www.learn-english-today.com/idioms/idioms_alphalistsA-Z.html
 public class Test
 {
 	interface MyRunnable
 	{
 		int run();
 	}
+
+	boolean done;
 
 	void timeIt(MyRunnable r, String label, int count, boolean aggregate)
 	{
@@ -49,56 +52,84 @@ public class Test
 
 	void solveCrossword(Vocab vocab, String[] boardString)
 	{
-		Board board = Board.fromStrings(boardString);
-		board.clear();
-		board.dump();
+		Solver solver = new Solver(vocab);
+		final Board board = Board.fromStrings(boardString);
 
-		Solver solver = new Solver(vocab, board);
-		timeIt(() -> {
-			boolean complete = solver.solve();
-			System.out.println("Complete? " + complete);
-			return 0;
-		}, "compete()", 1, false);
+		Thread t = new Thread(new Runnable()
+		{
+			public void run()
+			{
+				long start = System.currentTimeMillis();
 
-		board.dump();
+				solver.solve(board);
+				done = true;
+
+				System.out.printf("done (%.04fs)\n",
+					(System.currentTimeMillis() - start) / 1000f);
+			}
+		});
+		t.start();
+
+		while (!done) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+
+			Board snap = new Board(board);
+			snap.dump();
+		}
 	}
-
-	// void runOptions(Vocab vocab, String str)
-	// {
-	// 	char[] charray = str.toCharArray();
-	// 	List<char[]> opts = new ArrayList<>();
-	// 	timeIt(() -> {
-	// 		opts.clear();
-	// 		return vocab.options(opts, vocab.tries.get(charray.length), charray, 0);
-	// 	}, "options()", 100, false);
-	// }
 
 	void run()
 	{
 		Vocab vocab = new Vocab();
+
 		try {
-			vocab.scanFile("vocab/web2.txt");
-			vocab.scanFile("vocab/web2a.txt");
+			System.out.printf("Read %d unique words\n",
+				vocab.scanFiles("vocab"));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 
-		// runOptions(vocab, "         ");
+		// duration
+		timeIt(() -> {
+			return vocab.options(new ArrayList<>(),
+				"         ".toCharArray());
+		}, "options()", 100, false);
 
+		// solving
 		solveCrossword(vocab, new String[] {
+			// "JMBARRIE*PSYCHO",
+			// "IBELIEVE*OCELOT",
+			// "BALLPEEN*THWART",
+			// "**IMPLY*BLU*YAO",
+			// "HOKIES*FRIST***",
+			// "ONEND*WEAKSAUCE",
+			// "TETE*CHICKENPOX",
+			// "DOH*PRANKED*FOP",
+			// "ONAPLATTER*JOKE",
+			// "GETSUPSET*RARIN",
+			// "***ASSAD*DANGED",
+			// "AHH*SHY*HADER**",
+			// "COOLIO*SAMADAMS",
+			// "MAYIGO*THEROBOT",
+			// "EXTENT*PASSESON",
+
 			"JMBARRIE*PSYCHO",
-			"IBELIEVE*OCELOT",
-			"BALLPEEN*THWART",
-			"**IMPLY*BLU*YAO",
-			"HOKIES*FRIST***",
-			"ONEND*WEAKSAUCE",
-			"TETE*CHICKENPOX",
-			"DOH*PRANKED*FOP",
-			"ONAPLATTER*JOKE",
-			"GETSUPSET*RARIN",
-			"***ASSAD*DANGED",
-			"AHH*SHY*HADER**",
-			"COOLIO*SAMADAMS",
+			"IBE IEVE*OCELOT",
+			"        *THWART",
+			"**     *   *YAO",
+			"HOK ES*FRIST***",
+			"ONE D* EAKSAUC ",
+			"TET *C ICKENPO ",
+			"DOH*       *FO ",
+			"ONAPLA TER*JOK ",
+			"GETSUP ET*RARI ",
+			"***ASS D*DANGE ",
+			"AHH*SH *HADER**",
+			"COOLIO*        ",
 			"MAYIGO*THEROBOT",
 			"EXTENT*PASSESON",
 		});

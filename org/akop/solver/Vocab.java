@@ -26,7 +26,8 @@ import java.util.*;
 
 public class Vocab
 {
-	Map<Integer, Node> tries;
+	final Map<Integer, Node> tries;
+	final List<char[]> words;
 	final int minLength;
 
 	public Vocab()
@@ -38,6 +39,19 @@ public class Vocab
 	{
 		this.minLength = minLength;
 		tries = new HashMap<>();
+		words = new ArrayList<>();
+	}
+
+	public int scanFiles(String path)
+			throws IOException
+	{
+		int count = 0;
+		File dir = new File(path);
+		for (File file: dir.listFiles()) {
+			count += scanFile(file.toString());
+		}
+
+		return count;
 	}
 
 	public int scanFile(String path)
@@ -54,12 +68,17 @@ public class Vocab
 					continue;
 				}
 
-				Node n = tries.get(word.length);
-				if (n == null) {
-					tries.put(word.length, n = new Node());
+				Node node = tries.get(word.length);
+				if (node == null) {
+					tries.put(word.length, node = new Node());
 				}
 				for (char ch: word) {
-					n = n.add(ch);
+					node = node.append(ch);
+				}
+				if (node.wordIndex == -1) {
+					count++;
+					node.wordIndex = words.size();
+					words.add(word);
 				}
 			}
 		} finally {
@@ -103,13 +122,21 @@ public class Vocab
 		return sanitized;
 	}
 
-	int options(List<char[]> list, Node n, char[] word, int index)
+	public int options(List<Integer> list, char[] word)
+	{
+		return options(list, tries.get(word.length), word, 0);
+	}
+
+	public char[] word(int index)
+	{
+		return words.get(index);
+	}
+
+	int options(List<Integer> list, Node n, char[] word, int index)
 	{
 		if (index >= word.length) {
 			if (list != null) {
-				char[] copy = new char[word.length];
-				System.arraycopy(word, 0, copy, 0, word.length);
-				list.add(copy);
+				list.add(n.wordIndex);
 			}
 			return 1;
 		}
@@ -134,5 +161,26 @@ public class Vocab
 		}
 
 		return count;
+	}
+
+	static class Node
+	{
+		final Map<Character, Node> children;
+		int wordIndex;
+
+		Node()
+		{
+			children = new HashMap<>();
+			wordIndex = -1;
+		}
+
+		Node append(char ch)
+		{
+			Node k = children.get(ch);
+			if (k == null) {
+				children.put(ch, k = new Node());
+			}
+			return k;
+		}
 	}
 }

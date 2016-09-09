@@ -26,34 +26,51 @@ import java.util.*;
 public class Solver
 {
 	private Vocab vocab;
-	private Board board;
+	private boolean done;
 
-	public Solver(Vocab vocab, Board board)
+	public Solver(Vocab vocab)
 	{
 		this.vocab = vocab;
-		this.board = board;
 	}
 
-	public boolean solve()
+	public boolean solve(Board board)
 	{
-		return solve(0);
+		return solve(board, sortByCompletion(board), 0);
 	}
 
-	private boolean solve(int wordIndex)
+	private List<Board.Word> sortByCompletion(Board board)
 	{
-		if (wordIndex >= board.words.size()) {
+		List<Board.Word> words = board.words();
+		Collections.sort(words, new Comparator<Board.Word>()
+		{
+			public int compare(Board.Word one, Board.Word two)
+			{
+				return (int) ((two.complete - one.complete) * 100f);
+			}
+		});
+
+		return words;
+	}
+
+	private boolean solve(Board board, List<Board.Word> words, int wordIndex)
+	{
+		if (wordIndex >= words.size()) {
 			return true; // Solved
 		}
 
-		Word word = board.words.get(wordIndex);
-		char[] chars = board.squares(word);
+		int nextIndex = wordIndex + 1;
+		Board.Word word = words.get(wordIndex);
+		if (word.isSolved) {
+			return solve(board, words, nextIndex);
+		}
 
-		List<char[]> options = new ArrayList<>();
+		char[] chars = board.squares(word);
+		List<Integer> options = new ArrayList<>();
 		vocab.options(options, vocab.tries.get(word.len), chars, 0);
 
-		for (char[] option: options) {
-			board.putSquares(word, option);
-			if (solve(wordIndex + 1)) {
+		for (int option: options) {
+			board.putSquares(word, vocab.words.get(option));
+			if (solve(board, words, nextIndex)) {
 				return true;
 			}
 		}

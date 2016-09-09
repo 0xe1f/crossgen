@@ -28,14 +28,21 @@ public class Board
 	final int width;
 	final int height;
 	final char[][] board;
-	final List<Word> words;
 
-	public Board(int width, int height)
+	private Board(int width, int height)
 	{
 		this.width = width;
 		this.height = height;
 		board = new char[height][width];
-		words = new ArrayList<>();
+	}
+
+	public Board(Board orig)
+	{
+		// Not thread-safe
+		this(orig.width, orig.height);
+		for (int i = 0; i < height; i++) {
+			System.arraycopy(orig.board, 0, board, 0, width);
+		}
 	}
 
 	public static Board fromStrings(String[] strings)
@@ -63,8 +70,6 @@ public class Board
 				board.board[i][j] = ch;
 			}
 		}
-
-		board.scanWords();
 
 		return board;
 	}
@@ -98,34 +103,6 @@ public class Board
 		}
 	}
 
-	public void dump()
-	{
-		for (char[] row: board) {
-			for (char ch: row) {
-				if (ch != '\0') {
-					System.out.print("[" + ch + "]");
-				} else {
-					System.out.print("   ");
-				}
-			}
-			System.out.println("");
-		}
-	}
-
-	public static void dump(char[] charray)
-	{
-		String ret = "";
-		for (char ch: charray) {
-			ret += "[";
-			ret += ch;
-			ret += "]";
-		}
-
-		ret += " (" + charray.length + ")";
-
-		System.out.println(ret);
-	}
-
 	public void clear()
 	{
 		for (char[] row: board) {
@@ -140,23 +117,31 @@ public class Board
 	private Word newWord(int dir, int number, int row, int col)
 	{
 		int length = 0;
+		int completed = 0;
+
 		if (dir == Word.DIR_ACROSS) {
 			for (int j = col; j < width && board[row][j] != '\0'; j++) {
 				length++;
+				if (board[row][j] != ' ') {
+					completed++;
+				}
 			}
 		} else {
 			for (int i = row; i < height && board[i][col] != '\0'; i++) {
 				length++;
+				if (board[i][col] != ' ') {
+					completed++;
+				}
 			}
 		}
 
-		return new Word(dir, number, row, col, length);
+		return new Word(dir, number, row, col, length,
+			(float) completed / length);
 	}
 
-	private void scanWords()
+	List<Word> words()
 	{
-		words.clear();
-
+		List<Word> words = new ArrayList<>();
 		for (int i = 0, count = 0; i < height; i++) {
 			for (int j = 0; j < width; j++) {
 				if (board[i][j] == '\0') {
@@ -180,6 +165,70 @@ public class Board
 					}
 				}
 			}
+		}
+
+		return words;
+	}
+
+	public void dump()
+	{
+		for (int i = 0; i < height; i++) {
+			for (int j = 0; j < width; j++) {
+				char ch = board[i][j];
+				if (ch != '\0') {
+					System.out.print("[" + ch + "]");
+				} else {
+					System.out.print("   ");
+				}
+			}
+			System.out.println("");
+		}
+	}
+
+	public void dumpLayout()
+	{
+		dumpLayout(words());
+	}
+
+	void dumpLayout(List<Word> words)
+	{
+		StringBuilder sb = new StringBuilder();
+		for (Word word: words) {
+			sb.append(String.format("%2d%s. (%d,%d) '%s' (%d, %.02f)%s\n", word.number,
+				word.dir == Word.DIR_ACROSS ? "A" : "D", word.row, word.col,
+				new String(squares(word)), word.len, word.complete * 100f,
+				word.isSolved ? " solved" : ""));
+		}
+		System.out.println(sb);
+	}
+
+	static class Word
+	{
+		static final int DIR_ACROSS = 0;
+		static final int DIR_DOWN   = 1;
+
+		final int number;
+		final int row;
+		final int col;
+		final int dir;
+		final int len;
+		final boolean isSolved;
+		final float complete;
+
+		private Word(int dir, int number, int row, int col, int len,
+			float complete)
+		{
+			if (dir != DIR_ACROSS && dir != DIR_DOWN) {
+				throw new IllegalArgumentException("Direction not valid");
+			}
+
+			this.dir = dir;
+			this.number = number;
+			this.row = row;
+			this.col = col;
+			this.len = len;
+			this.isSolved = complete >= 1;
+			this.complete = complete;
 		}
 	}
 }
