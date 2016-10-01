@@ -122,9 +122,18 @@ public class Vocab
 		return sanitized;
 	}
 
-	public int options(List<Integer> list, char[] word)
+	public int[] options(char[] word)
 	{
-		return options(list, tries.get(word.length), word, 0);
+		List<Node> list = new ArrayList<>();
+		options(list, tries.get(word.length), word, 0);
+
+		int index = 0;
+		int[] options = new int[list.size()];
+		for (Node node: list) {
+			options[index++] = node.wordIndex;
+		}
+
+		return options;
 	}
 
 	public char[] word(int index)
@@ -132,16 +141,23 @@ public class Vocab
 		return words.get(index);
 	}
 
-	int options(List<Integer> list, Node n, char[] word, int index)
+	int options(List<Node> list, char[] chars)
 	{
+		return options(list, tries.get(chars.length), chars, 0);
+	}
+
+	int options(List<Node> list, Node n, char[] word, int index)
+	{
+		int count = 0;
 		if (index >= word.length) {
-			if (list != null) {
-				list.add(n.wordIndex);
+			if (list != null && !n.taken) {
+				list.add(n);
 			}
-			return 1;
+
+			count = 1;
+			n = null;
 		}
 
-		int count = 0;
 		if (n != null) {
 			char ch = word[index];
 			int nextIndex = index + 1;
@@ -167,6 +183,7 @@ public class Vocab
 	{
 		final Map<Character, Node> children;
 		int wordIndex;
+		boolean taken;
 
 		Node()
 		{

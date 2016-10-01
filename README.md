@@ -1,2 +1,12 @@
-# crossgen
-Crossword Generator
+crossgen
+========
+
+**crossgen** is an experimental (very experimental) crossword filler.
+Given an initial layout and a vocabulary, it will try to complete the
+remaining squares.
+
+License
+=======
+
+Written by Akop Karapetyan.
+Licensed under the [Apache License](LICENSE).

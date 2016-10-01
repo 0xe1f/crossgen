@@ -52,27 +52,23 @@ public class Test
 
 	void solveCrossword(Vocab vocab, String[] boardString)
 	{
-		Solver solver = new Solver(vocab);
-		final Board board = Board.fromStrings(boardString);
+		Board board = Board.fromStrings(boardString);
+		Solver solver = new Solver(board, vocab);
+		long start = System.currentTimeMillis();
 
 		Thread t = new Thread(new Runnable()
 		{
 			public void run()
 			{
-				long start = System.currentTimeMillis();
-
-				solver.solve(board);
+				solver.solve();
 				done = true;
-
-				System.out.printf("done (%.04fs)\n",
-					(System.currentTimeMillis() - start) / 1000f);
 			}
 		});
 		t.start();
 
 		while (!done) {
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(250);
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
@@ -80,6 +76,9 @@ public class Test
 			Board snap = new Board(board);
 			snap.dump();
 		}
+
+		System.out.printf("done (%.04fs)\n",
+			(System.currentTimeMillis() - start) / 1000f);
 	}
 
 	void run()
@@ -94,10 +93,9 @@ public class Test
 		}
 
 		// duration
-		timeIt(() -> {
-			return vocab.options(new ArrayList<>(),
-				"         ".toCharArray());
-		}, "options()", 100, false);
+		// timeIt(() -> {
+		// 	return vocab.options("         ".toCharArray()).length;
+		// }, "options()", 100, false);
 
 		// solving
 		solveCrossword(vocab, new String[] {
@@ -122,12 +120,12 @@ public class Test
 			"        *THWART",
 			"**     *   *YAO",
 			"HOK ES*FRIST***",
-			"ONE D* EAKSAUC ",
-			"TET *C ICKENPO ",
-			"DOH*       *FO ",
-			"ONAPLA TER*JOK ",
-			"GETSUP ET*RARI ",
-			"***ASS D*DANGE ",
+			"ONE D*         ",
+			"TET *C ICKENP  ",
+			"DOH*       *F  ",
+			"ONAPLA TER*JO  ",
+			"GETSUP ET*RAR  ",
+			"***ASS D*DANG  ",
 			"AHH*SH *HADER**",
 			"COOLIO*        ",
 			"MAYIGO*THEROBOT",

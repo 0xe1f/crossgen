@@ -25,22 +25,39 @@ import java.util.*;
 
 public class Solver
 {
-	private Vocab vocab;
+	private final Board board;
+	private final Vocab vocab;
 	private boolean done;
+	private final List<Board.Word> words;
+	private final Board.Word[][] across;
+	private final Board.Word[][] down;
 
-	public Solver(Vocab vocab)
+	public Solver(Board board, Vocab vocab)
 	{
 		this.vocab = vocab;
+		this.board = board;
+
+		words = board.words();
+
+		across = new Board.Word[board.height][board.width];
+		down = new Board.Word[board.height][board.width];
+
+		for (Board.Word word: words) {
+			if (word.dir == Board.Word.DIR_ACROSS) {
+				for (int j = word.col, k = 0; k < word.len; j++, k++) {
+					across[word.row][j] = word;
+				}
+			} else {
+				for (int i = word.row, k = 0; k < word.len; i++, k++) {
+					down[i][word.col] = word;
+				}
+			}
+		}
 	}
 
-	public boolean solve(Board board)
+	private List<Board.Word> sortedByCompletion()
 	{
-		return solve(board, sortByCompletion(board), 0);
-	}
-
-	private List<Board.Word> sortByCompletion(Board board)
-	{
-		List<Board.Word> words = board.words();
+		List<Board.Word> sortedWords = new ArrayList<>(words);
 		Collections.sort(words, new Comparator<Board.Word>()
 		{
 			public int compare(Board.Word one, Board.Word two)
@@ -49,29 +66,125 @@ public class Solver
 			}
 		});
 
-		return words;
+		return sortedWords;
 	}
 
-	private boolean solve(Board board, List<Board.Word> words, int wordIndex)
+	private List<Board.Word> sortedByDirection()
 	{
-		if (wordIndex >= words.size()) {
+		List<Board.Word> sortedWords = new ArrayList<>(words);
+		Collections.sort(words, new Comparator<Board.Word>()
+		{
+			public int compare(Board.Word one, Board.Word two)
+			{
+				return one.dir - two.dir;
+			}
+		});
+
+		return sortedWords;
+	}
+
+	private List<Board.Word> sortedByProximity()
+	{
+		Queue<Board.Word> q = new ArrayDeque<>();
+		Set<Board.Word> v = new HashSet<>();
+		List<Board.Word> list = new ArrayList<>();
+
+		for (Board.Word w: words) {
+			if (!w.isSolved && !v.contains(w)) {
+				q.add(w);
+				while (!q.isEmpty()) {
+					Board.Word qw = q.remove();
+					if (!v.contains(qw)) {
+						v.add(qw);
+						list.add(qw);
+
+						if (qw.dir == Board.Word.DIR_ACROSS) {
+							for (int j = qw.col, k = 0; k < qw.len; j++, k++) {
+								if (board.board[qw.row][j] == ' ') {
+									q.add(down[qw.row][j]);
+								}
+							}
+						} else {
+							for (int i = qw.row, k = 0; k < qw.len; i++, k++) {
+								if (board.board[i][qw.col] == ' ') {
+									q.add(across[i][qw.col]);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return list;
+	}
+
+	private boolean canPlace(Board.Word word, char[] chars)
+	{
+		int row = word.row;
+		int col = word.col;
+
+		if (word.dir == Board.Word.DIR_ACROSS) {
+			for (int k = 0; k < word.len; col++, k++) {
+				if (board.board[row][col] == ' ') {
+					Board.Word x = down[row][col];
+					if (x != null) {
+						char[] xchars = board.squares(x);
+						xchars[row - x.row] = chars[k];
+						if (vocab.options(null, xchars) <= 0) {
+							return false;
+						}
+					}
+				}
+			}
+		} else {
+			for (int k = 0; k < word.len; row++, k++) {
+				if (board.board[row][col] == ' ') {
+					Board.Word x = across[row][col];
+					if (x != null) {
+						char[] xchars = board.squares(x);
+						xchars[col - x.col] = chars[k];
+						if (vocab.options(null, xchars) <= 0) {
+							return false;
+						}
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+	public boolean solve()
+	{
+		 return solve(sortedByProximity(), 0);
+	}
+
+	private boolean solve(List<Board.Word> unsolved, int index)
+	{
+		if (index >= unsolved.size()) {
 			return true; // Solved
 		}
 
-		int nextIndex = wordIndex + 1;
-		Board.Word word = words.get(wordIndex);
+		int nextIndex = index + 1;
+		Board.Word word = unsolved.get(index);
 		if (word.isSolved) {
-			return solve(board, words, nextIndex);
+			return solve(unsolved, nextIndex);
 		}
 
 		char[] chars = board.squares(word);
-		List<Integer> options = new ArrayList<>();
-		vocab.options(options, vocab.tries.get(word.len), chars, 0);
+		List<Vocab.Node> options = new ArrayList<>();
+		vocab.options(options, chars);
 
-		for (int option: options) {
-			board.putSquares(word, vocab.words.get(option));
-			if (solve(board, words, nextIndex)) {
-				return true;
+		for (Vocab.Node option: options) {
+			char[] optWord = vocab.words.get(option.wordIndex);
+			if (canPlace(word, optWord)) {
+				option.taken = true;
+				board.putSquares(word, optWord);
+				if (solve(unsolved, nextIndex)) {
+					return true;
+				}
+				option.taken = false;
 			}
 		}
 

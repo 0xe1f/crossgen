@@ -65,9 +65,14 @@ public class Board
 			for (int j = 0; j < width; j++) {
 				char ch = strings[i].charAt(j);
 				if (ch == '*') {
-					ch = '\0';
+					board.board[i][j] = '\0';
+				} else if (ch >= 'a' && ch <= 'z') {
+					board.board[i][j] = (char)('A' + (ch - 'a'));
+				} else if (ch == ' ' || (ch >= 'A' && ch <= 'Z')) {
+					board.board[i][j] = ch;
+				} else {
+					throw new IllegalArgumentException(ch + " is not a valid char");
 				}
-				board.board[i][j] = ch;
 			}
 		}
 
@@ -229,6 +234,29 @@ public class Board
 			this.len = len;
 			this.isSolved = complete >= 1;
 			this.complete = complete;
+		}
+
+		@Override
+		public boolean equals(Object obj)
+		{
+			if (obj instanceof Word) {
+				Word w = (Word) obj;
+				return w.row == row && w.col == col && w.dir == dir;
+			}
+			return false;
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return (row & 0xfff) | ((col & 0xfff) << 12) | (dir << 24);
+		}
+
+		@Override
+		public String toString()
+		{
+			return this.number + (dir == DIR_ACROSS ? "A" : "D")
+				+ ". (" + row + "," + col + ")";
 		}
 	}
 }
