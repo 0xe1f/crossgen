@@ -26,7 +26,7 @@ import java.util.*;
 
 public class Vocab
 {
-	final Map<Integer, Node> tries;
+	private final Map<Integer, INode> tries;
 	final List<char[]> words;
 	final int minLength;
 
@@ -68,16 +68,12 @@ public class Vocab
 					continue;
 				}
 
-				Node node = tries.get(word.length);
+				INode node = tries.get(word.length);
 				if (node == null) {
-					tries.put(word.length, node = new Node());
+					tries.put(word.length, node = new INode());
 				}
-				for (char ch: word) {
-					node = node.append(ch);
-				}
-				if (node.wordIndex == -1) {
+				if (node.append(word, words.size())) {
 					count++;
-					node.wordIndex = words.size();
 					words.add(word);
 				}
 			}
@@ -124,13 +120,13 @@ public class Vocab
 
 	public int[] options(char[] word)
 	{
-		List<Node> list = new ArrayList<>();
+		List<Leaf> list = new ArrayList<>();
 		options(list, tries.get(word.length), word, 0);
 
 		int index = 0;
 		int[] options = new int[list.size()];
-		for (Node node: list) {
-			options[index++] = node.wordIndex;
+		for (Leaf leaf: list) {
+			options[index++] = leaf.wordIndex;
 		}
 
 		return options;
@@ -141,34 +137,34 @@ public class Vocab
 		return words.get(index);
 	}
 
-	int options(List<Node> list, char[] chars)
+	int options(List<Leaf> list, char[] chars)
 	{
 		return options(list, tries.get(chars.length), chars, 0);
 	}
 
-	int options(List<Node> list, Node n, char[] word, int index)
+	int options(List<Leaf> list, Node n, char[] word, int index)
 	{
 		int count = 0;
-		if (index >= word.length) {
-			if (list != null && !n.taken) {
-				list.add(n);
+		if (n instanceof Leaf) {
+			Leaf l = (Leaf) n;
+			if (!l.taken) {
+				if (list != null) {
+					list.add(l);
+				}
+				count++;
 			}
-
-			count = 1;
-			n = null;
-		}
-
-		if (n != null) {
+		} else if (n instanceof INode) {
+			INode in = (INode) n;
 			char ch = word[index];
 			int nextIndex = index + 1;
 
 			if (ch != ' ') {
-				Node k = n.children.get(ch);
+				Node k = in.children.get(ch);
 				if (k != null) {
 					count += options(list, k, word, nextIndex);
 				}
 			} else {
-				for (Map.Entry<Character, Node> entry: n.children.entrySet()) {
+				for (Map.Entry<Character, Node> entry: in.children.entrySet()) {
 					word[index] = entry.getKey();
 					count += options(list, entry.getValue(), word, nextIndex);
 				}
@@ -179,25 +175,61 @@ public class Vocab
 		return count;
 	}
 
-	static class Node
+	static abstract class Node
+	{
+	}
+
+	private static class INode
+			extends Node
 	{
 		final Map<Character, Node> children;
-		int wordIndex;
-		boolean taken;
 
-		Node()
+		INode()
 		{
 			children = new HashMap<>();
-			wordIndex = -1;
 		}
 
-		Node append(char ch)
+		boolean append(char[] chars, int newIndex)
 		{
-			Node k = children.get(ch);
-			if (k == null) {
-				children.put(ch, k = new Node());
+			INode node = this;
+
+			int end = chars.length - 1;
+			for (int i = 0; i < end; i++) {
+				node = node.appendINode(chars[i]);
 			}
-			return k;
+
+			return node.appendLeaf(chars[end], newIndex);
+		}
+
+		private INode appendINode(char ch)
+		{
+			INode in = (INode) children.get(ch);
+			if (in == null) {
+				children.put(ch, in = new INode());
+			}
+			return in;
+		}
+
+		private boolean appendLeaf(char ch, int newIndex)
+		{
+			Leaf leaf = (Leaf) children.get(ch);
+			if (leaf == null) {
+				children.put(ch, new Leaf(newIndex));
+			}
+
+			return leaf == null;
+		}
+	}
+
+	static class Leaf
+			extends Node
+	{
+		final int wordIndex;
+		boolean taken;
+
+		Leaf(int wordIndex)
+		{
+			this.wordIndex = wordIndex;
 		}
 	}
 }

@@ -173,18 +173,21 @@ public class Solver
 		}
 
 		char[] chars = board.squares(word);
-		List<Vocab.Node> options = new ArrayList<>();
+		List<Vocab.Leaf> options = new ArrayList<>();
 		vocab.options(options, chars);
 
-		for (Vocab.Node option: options) {
+		for (Vocab.Leaf option: options) {
 			char[] optWord = vocab.words.get(option.wordIndex);
 			if (canPlace(word, optWord)) {
 				option.taken = true;
 				board.putSquares(word, optWord);
-				if (solve(unsolved, nextIndex)) {
+
+				boolean solved = solve(unsolved, nextIndex);
+				option.taken = false;
+
+				if (solved) {
 					return true;
 				}
-				option.taken = false;
 			}
 		}
 

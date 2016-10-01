@@ -127,9 +127,9 @@ public class Test
 			"GETSUP ET*RAR  ",
 			"***ASS D*DANG  ",
 			"AHH*SH *HADER**",
-			"COOLIO*        ",
-			"MAYIGO*THEROBOT",
-			"EXTENT*PASSESON",
+			"      *        ",
+			"      *THEROBOT",
+			"      *PASSESON",
 		});
 	}	
 
