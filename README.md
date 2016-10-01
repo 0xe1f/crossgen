@@ -5,6 +5,8 @@ crossgen
 Given an initial layout and a vocabulary, it will try to complete the
 remaining squares.
 
+![Animation](http://i.imgur.com/6flaKk6.gif "Animation")
+
 License
 =======
 
